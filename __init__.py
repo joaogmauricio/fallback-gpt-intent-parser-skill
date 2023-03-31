@@ -31,6 +31,8 @@ headers = {
 
 class FallbackGptIntentParser(FallbackSkill):
 
+	_conversation_history = []
+
 	def __init__(self):
 		FallbackSkill.__init__(self)
 
@@ -39,7 +41,7 @@ class FallbackGptIntentParser(FallbackSkill):
 
 	def handle_fallback_GptIntentParser(self, message):
 		try:
-			intents = Path('/opt/mycroft/skills/intents.txt').read_text()
+			intents = Path('/opt/mycroft/skills/fallback-gpt-intent-parser-skill/intents.txt').read_text()
 			self._conversation_history.append({"role": "system", "content": intents})
 			self._conversation_history.append({"role": "system", "content": "Use the following JSON template: { \"intent\": <exact intent from the list>, \"params\": [ { \"name\": <matched parameter name>, \"value\": <corresponding entity value> }, ...  ] }"})
 			self._conversation_history.append({"role": "user", "content": "Match the one - only 1 - intent from the above list that best matches this prompt: " +  message.data['utterance'] + ". Answer with a JSON object that follows the template provided above and absolutely nothing else. If no listed intent matches, reply with {} and nothing else."})
@@ -56,8 +58,8 @@ class FallbackGptIntentParser(FallbackSkill):
 			response = response_json["choices"][0]["message"]["content"]
 
 #TODO
-#			test = json.loads(response)
-#			self.speak(test["intent"])
+#			response_tst = json.loads(response)
+#			self.speak(response_tst["intent"])
 
 			self.speak(response)
 			return True
