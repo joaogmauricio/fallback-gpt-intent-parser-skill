@@ -1,4 +1,5 @@
 from mycroft import FallbackSkill, intent_handler
+from mycroft.messagebus import Message
 import requests
 import urllib
 import json
@@ -40,6 +41,7 @@ class FallbackGptIntentParser(FallbackSkill):
 		self.register_fallback(self.handle_fallback_GptIntentParser, 70)
 
 	def handle_fallback_GptIntentParser(self, message):
+		self.log.info("Using GPTIntentParser fallback")
 		try:
 			intents = Path('/opt/mycroft/skills/fallback-gpt-intent-parser-skill/intents.txt').read_text()
 			self._conversation_history.append({"role": "system", "content": intents})
@@ -54,14 +56,20 @@ class FallbackGptIntentParser(FallbackSkill):
 #			self.log.error(json.dumps(response.json()))
 			response_json = response.json()
 			freason = response_json["choices"][0]["finish_reason"]
-			self.log.info(freason)
+#			self.log.info(freason)
 			response = response_json["choices"][0]["message"]["content"]
 
-#TODO
-#			response_tst = json.loads(response)
-#			self.speak(response_tst["intent"])
+			params = {}
+			intent_obj_json = json.loads(response)
+			for item in intent_obj_json["params"]:
+				params[item["name"]] = item["value"]
 
-			self.speak(response)
+			new_intent = intent_obj_json["intent"].format(**params)
+			self.log.error(new_intent)
+
+			#TODO: rework this
+			self.bus.emit(Message("recognizer_loop:utterance", {'utterances': [new_intent], 'lang': 'en-us'}))
+
 			return True
 		except Exception as e:
 			self.log.error("error in GptIntentParser fallback request " + str(e))
