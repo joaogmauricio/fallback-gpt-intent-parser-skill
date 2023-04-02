@@ -4,9 +4,9 @@ import requests
 import urllib
 import json
 import os
-
+import re
 from pathlib import Path
-
+from padatious.util import expand_parentheses
 
 def read_config() -> dict:
 	filename = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -64,11 +64,14 @@ class FallbackGptIntentParser(FallbackSkill):
 			for item in intent_obj_json["params"]:
 				params[item["name"]] = item["value"]
 
-			new_intent = intent_obj_json["intent"].format(**params)
-			self.log.error(new_intent)
+			expansion = expand_parentheses(intent_obj_json["intent"])[0]
+			new_intent = re.sub(' +', ' ', ''.join(expansion)).strip(" ")
+			self.log.info(new_intent)
 
-			#TODO: rework this
-			self.bus.emit(Message("recognizer_loop:utterance", {'utterances': [new_intent], 'lang': 'en-us'}))
+			new_final_intent = new_intent.format(**params)
+			self.log.info(new_final_intent)
+
+			self.bus.emit(Message("recognizer_loop:utterance", {'utterances': [new_final_intent], 'lang': 'en-us'}))
 
 			return True
 		except Exception as e:
